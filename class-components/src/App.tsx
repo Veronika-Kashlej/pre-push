@@ -1,66 +1,39 @@
 import './App.css';
-import { Component, type ReactNode } from 'react';
-import { SearchBar } from './components/searchBar/SearchBar';
-import { fetchBooks } from './service/books-api';
-import type { AppState } from './types/books-app-types';
-import { Catalog } from './components/catalog/Catalog';
-import { ErrorButton } from './components/errorButton/ErrorButton';
+import Search from './components/Search/Search.tsx';
+import Results from './components/Results/Results.tsx';
+import { Component } from 'react';
+import type { Pokemon } from './types.ts';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import ErrorButton from './components/ErrorButton.tsx';
+import ErrorPage from './components/ErrorPage.tsx';
 
-class App extends Component<object, AppState> {
-  state = {
-    currentQuery: '',
-    resultData: [],
-    loading: false,
-    error: null,
+interface AppState {
+  data?: Pokemon[];
+  error: string;
+}
+
+class App extends Component<Record<string, never>, AppState> {
+  state: AppState = {
+    data: [],
+    error: '',
   };
 
-  componentDidMount(): void {
-    const lastQuery = localStorage.getItem('searchQuery') || '';
-    this.setState({ currentQuery: lastQuery }, () => {
-      this.handleFetchBooks(lastQuery);
-    });
-  }
-
-  handleChangeSearchQuery = async (query: string): Promise<void> => {
-    localStorage.setItem('searchQuery', query);
-    this.setState({ currentQuery: query });
-    this.handleFetchBooks(query);
+  onSearch = (newData: Array<Pokemon> | undefined, err: string) => {
+    this.setState({ data: newData, error: err });
   };
 
-  handleFetchBooks = async (query?: string): Promise<void> => {
-    this.setState({ loading: true, error: null });
-    try {
-      const response = await fetchBooks(query ?? '');
-      this.setState({
-        resultData: response.resultData,
-        loading: false,
-        error: null,
-      });
-    } catch (error) {
-      if (error instanceof Error) {
-        this.setState({ loading: false, error: error.message });
-      } else {
-        this.setState({ loading: false, error: String(error) });
-      }
-    }
-  };
+  render() {
 
-  render(): ReactNode {
     return (
-      <div className="app-wrapper">
-        <SearchBar
-          currentQuery={this.state.currentQuery}
-          handleChangeSearchQuery={this.handleChangeSearchQuery}
-        />
-
-        <Catalog
-          resultData={this.state.resultData}
-          loading={this.state.loading}
-          error={this.state.error}
-        />
-
-        <ErrorButton />
-      </div>
+      <ErrorBoundary fallback={<ErrorPage />}>
+        <div className='flex wrapper full'>
+          <div className='info'>
+            <Search onSearch={this.onSearch} placeholder={'Search'} />
+            <Results data={this.state.data} error={this.state.error} />
+          </div>
+          <ErrorButton />
+        </div>
+      </ErrorBoundary>
     );
   }
 }
